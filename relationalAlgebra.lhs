@@ -86,7 +86,7 @@ TODO:
 >   )
 >  where
 
-> import qualified Data.List
+> import qualified Data.List as List
 > import Data.Maybe
 
 Abstract Data Types (ADTs) for a relational table (all data items are
@@ -315,7 +315,7 @@ rows in the result.
 >   let is = ixsOfColumns cols schema in
 >     Table ("proj (" ++ nym ++ ")")
 >           (pickElementsByIxs is schema)
->           (Data.List.nub (map (pickElementsByIxs is) values))
+>           (List.nub (map (pickElementsByIxs is) values))
 
 ===========================================================================
 Selecting Records
@@ -392,23 +392,23 @@ Error-checking gadget:
 > union (Table n1 s1 v1) (Table n2 s2 v2) = 
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
 >   Table ("union (" ++ n1 ++ ", " ++ n2 ++ ")") 
->    s1 (Data.List.union v1 v2)
+>    s1 (List.union v1 v2)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 > intersect (Table n1 s1 v1) (Table n2 s2 v2) = 
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
 >   Table ("intersect (" ++ n1 ++ ", " ++ n2 ++ ")")
->    s1 (Data.List.intersect v1 v2)
+>    s1 (List.intersect v1 v2)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The set-difference operator \\ of section 3.2.1.5., modeled after the
-similar one in standard module "Data.List."
+similar one in standard module "List."
 
 > (\\) (Table n1 s1 v1) (Table n2 s2 v2) = 
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
 >   Table ("diff (" ++ n1 ++ ", " ++ n2 ++ ")")
->    s1 (v1 Data.List.\\ v2)
+>    s1 (v1 List.\\ v2)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -444,7 +444,7 @@ prefixing the table name to each attribute name:
 >      sf1 = map (dot n1) s1
 >      sf2 = map (dot nf2) s2
 >      ncl = cross' v1 v2
->      x   = assert ((Data.List.nub ncl) == ncl) "Unexpected duplicates"
+>      x   = assert ((List.nub ncl) == ncl) "Unexpected duplicates"
 >  in x `seq` -- forces "assert" to execute
 >      Table ("cross0 (" ++ n1 ++ ", " ++ nf2 ++ ")")
 >            (sf1 ++ sf2)
@@ -491,7 +491,7 @@ but fixes the table name only on the right-hand table.
 >      sf1 = fancs n1  s1 s2
 >      sf2 = fancs nf2 s2 s1
 >      ncl = cross' v1 v2
->      x   = assert ((Data.List.nub ncl) == ncl) "Unexpected duplicates"
+>      x   = assert ((List.nub ncl) == ncl) "Unexpected duplicates"
 >  in x `seq` -- forces "assert" to execute
 >      Table ("cross (" ++ n1 ++ ", " ++ nf2 ++ ")")
 >            (sf1 ++ sf2)
@@ -505,7 +505,7 @@ be crucial for a decent implementation of "join".
 >  let nf2 = fn2 n1 n2
 >      sf2 = fancs nf2 s2 s1
 >      ncl = cross' v1 v2
->      x   = assert ((Data.List.nub ncl) == ncl) "Unexpected duplicates"
+>      x   = assert ((List.nub ncl) == ncl) "Unexpected duplicates"
 >  in x `seq` -- forces "assert" to execute
 >      Table ("cross2 (" ++ n1 ++ ", " ++ nf2 ++ ")")
 >            (s1 ++ sf2)
@@ -515,15 +515,15 @@ be crucial for a decent implementation of "join".
 Natural Join
 
 The formal spec for t1 `join` t2 is
- (project (s1 `Data.List.union` s2)
+ (project (s1 `List.union` s2)
           (select (t1.A1 == t2.A2 ... t1.An == t2.An)
           (cross t1 t2)))
 
 where s1 = schema t1, s2 = schema t2 and {A1, ..., An} == (s1
-`Data.List.intersect` s2). But we must do a few little things to make this
+`List.intersect` s2). But we must do a few little things to make this
 real. First of all, cross renames things via fancs. We need something
 like that for join, but it must report the fixed names. Furthermore,
-so the Data.List.union will get ONE of each of the matching columns, we
+so the List.union will get ONE of each of the matching columns, we
 must only patch the right-hand one, s2, the same way cross2 does.
 
   Precondition: n1 != n2
@@ -539,9 +539,9 @@ must only patch the right-hand one, s2, the same way cross2 does.
 >      sf2 = fancs n2 s2 s1
 >      x   = assert (n1 /= n2) "Tables must have different names here !"
 >  in x `seq` -- forces "assert" to execute
->      let a = (sf1 Data.List.\\ s1)
->          b = (sf2 Data.List.\\ s2)
->      in if (not (null (a `Data.List.intersect` b))) then
+>      let a = (sf1 List.\\ s1)
+>          b = (sf2 List.\\ s2)
+>      in if (not (null (a `List.intersect` b))) then
 >            error "Catastrophic failure: fixedNames"
 >          else (map unDot a,b) -- unfix left-hand names so "union"
 >                               -- will pick it up.
@@ -563,7 +563,7 @@ Take a deep breath:
 >      fns = fixedNames n1 s1 nf2 s2
 >      t3  = cross2 t1 t2 -- crucial it be cross2 here
 >      t4  = select (joinPred fns) t3
->      rus = s1 `Data.List.union` s2
+>      rus = s1 `List.union` s2
 >      pj  = project rus t4
 >  in  renameTable ("join (" ++ n1 ++ ", " ++ nf2 ++ ")") pj
 
@@ -583,7 +583,7 @@ Division
 
 > divideBy r@(Table n1 s1 v1) s@(Table n2 s2 v2) =
 >  let x   = assert (s1 `subset` s2) "Divide precondition S subset R"
->      rms = s1 Data.List.\\ s2
+>      rms = s1 List.\\ s2
 >      t1  = project (rms ++ s2) r
 >      t2  = cross (project rms r) s
 >      t3  = project rms (t2 \\ t1)
