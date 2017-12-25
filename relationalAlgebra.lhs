@@ -51,32 +51,32 @@ TODO:
 ===========================================================================
 
 > module RelationalAlgebra (
->   Table     
+>   Table
 >   , project      -- Schema -> Table -> Table
->   , select       -- (Schema -> Record -> Bool) -> Table -> Table 
+>   , select       -- (Schema -> Record -> Bool) -> Table -> Table
 >   , cross        -- Table -> Table -> Table
 >                  --  (renames only colliding field names)
 >   , join         -- Table -> Table -> Table
 >   , thetaJoin    -- (Schema -> Record -> Bool) -> Table -> Table -> Table
 >   , divideBy     -- Table -> Table -> Table
->   , intersect    -- Table -> Table -> Table 
->   , union        -- Table -> Table -> Table 
+>   , intersect    -- Table -> Table -> Table
+>   , union        -- Table -> Table -> Table
 >   , (\\)         -- Table -> Table -> Table ("set difference")
 >   , renameTable  -- Name -> Table -> Table
 >   , renameSchema -- Schema -> Table -> Table
 >   , rename       -- Name -> Schema -> Table -> Table
->
+
 >   -- some special cases --
 >   , selectf      -- String -> (String -> Bool) -> Table -> Table
 >   , cross2       -- Table -> Table -> Table
 >                  --  (only renames schema in second table
 >   , cross0       -- Table -> Table -> Table
 >                  --  (renames all fields colliding or not)
->
+
 >   -- some display utilities --
->   , printTable   -- Table -> IO () 
+>   , printTable   -- Table -> IO ()
 >   , showTable    -- Table -> String
->
+
 >   -- some miscellaneous utilities --
 >   , assocL1             -- Table -> Int -> Field -> Maybe Value
 >   , assocL2             -- Schema -> Record -> Field -> Maybe Value
@@ -118,7 +118,7 @@ Here would be a check for number 1
 >                               else Just ls
 
 ===========================================================================
-S A M P L E   D A T A B A S E 
+S A M P L E   D A T A B A S E
 ===========================================================================
 
 > account = Table
@@ -218,7 +218,7 @@ of the table.
 >  in  assocL2 s tupleVar field
 
 > assocL2 :: Schema -> Record -> Field -> Maybe Value
-> assocL2 schema record field = 
+> assocL2 schema record field =
 >  lookup field (zip schema record)
 
 In the next one, we can be more clever with the "Maybe" monad:
@@ -251,7 +251,7 @@ Pretty Print
 >    maxWidths' (una:mas) = zipWith max una (maxWidths' mas)
 >    columnWidths (Table n s v) = map (map length) v
 >    fieldNameWidths (Table n s v) = map length s
-                           
+
 > showTable t@(Table n s v) =
 >   let ms = maxWidths t
 >       ss = sum ms + 1 + length ms
@@ -266,18 +266,18 @@ Pretty Print
 >     ++ br
 >     where
 >      formedLine lengs stufs =
->        "|" ++ (concat 
+>        "|" ++ (concat
 >        (zipWith (\l s -> capped (strRtPaddedTo l s)) lengs stufs))
->
+
 >      strRtPaddedTo n str = let ln = length str in
 >        if (n >= ln) then str ++ nSpaces (n - ln)
 >        else take n str
->
+
 >      nSpaces = nChars ' '
->
+
 >      nChars :: Char -> Int -> [Char]
 >      nChars = flip replicate
->
+
 >      capped str = str ++ "|"
 
 > newline = ['\r', '\n']
@@ -304,7 +304,7 @@ ixsOfColumns ["Clip", "Nr"] -> [2,0]
 > nonNeg = (>= (0::Int))
 
 > ixsOfColumns cols schema = filter nonNeg (map (ixOfStr schema) cols)
->
+
 > pickElementsByIxs iocs lyst = map (lyst !!) iocs
 
 In the following, "nub" makes sure there are no duplicate
@@ -347,7 +347,7 @@ a record to a bool. Here are some predicate-construction helpers:
 >   (fromJust
 >    (assocL2 schema record field)) `ordop` const)
 
-> fieldMatchesConstant field value = 
+> fieldMatchesConstant field value =
 >  fieldOpConstP field (==) value
 
 > numFieldOpConstP field ordop const =
@@ -356,7 +356,7 @@ a record to a bool. Here are some predicate-construction helpers:
 >    (fromJust
 >     (assocL2 schema record field))) `ordop` const)
 
-> fieldOpFieldP f1 op f2 = 
+> fieldOpFieldP f1 op f2 =
 >  (\schema record ->
 >    assocL2 schema record f1 `op`
 >    assocL2 schema record f2)
@@ -371,11 +371,11 @@ a record to a bool. Here are some predicate-construction helpers:
 >    in -- TODO: fix this kludge to force selection of numeric overload.
 >       --       Vapid boolean expressions here. I don't know a cleaner
 >       --       way to force selection of the numeric overload.
->        ((v1 > 0) || (v1 <= 0)) && -- take these two lines out to 
+>        ((v1 > 0) || (v1 <= 0)) && -- take these two lines out to
 >        ((v2 > 0) || (v2 <= 0)) && -- see the generated error
 >        v1 `op` v2)
 
-> combinePs p1 combop p2 = 
+> combinePs p1 combop p2 =
 >  (\schema record ->
 >    ((p1 schema record) `combop` (p2 schema record)))
 
@@ -389,14 +389,14 @@ Error-checking gadget:
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-> union (Table n1 s1 v1) (Table n2 s2 v2) = 
+> union (Table n1 s1 v1) (Table n2 s2 v2) =
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
->   Table ("union (" ++ n1 ++ ", " ++ n2 ++ ")") 
+>   Table ("union (" ++ n1 ++ ", " ++ n2 ++ ")")
 >    s1 (List.union v1 v2)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-> intersect (Table n1 s1 v1) (Table n2 s2 v2) = 
+> intersect (Table n1 s1 v1) (Table n2 s2 v2) =
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
 >   Table ("intersect (" ++ n1 ++ ", " ++ n2 ++ ")")
 >    s1 (List.intersect v1 v2)
@@ -405,7 +405,7 @@ Error-checking gadget:
 The set-difference operator \\ of section 3.2.1.5., modeled after the
 similar one in standard module "List."
 
-> (\\) (Table n1 s1 v1) (Table n2 s2 v2) = 
+> (\\) (Table n1 s1 v1) (Table n2 s2 v2) =
 >  let x = assert (s1 == s2) "Schema mismatch" in x `seq` -- force eval
 >   Table ("diff (" ++ n1 ++ ", " ++ n2 ++ ")")
 >    s1 (v1 List.\\ v2)
@@ -426,7 +426,7 @@ similar one in standard module "List."
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 > rename :: Name -> Schema -> Table -> Table
-> rename n s t = 
+> rename n s t =
 >  renameTable n (renameSchema s t)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -436,7 +436,7 @@ Cartesian Product
 
 > dot s t = (s ++ "." ++ t)
 
-The following version of cross renames both table schemata by 
+The following version of cross renames both table schemata by
 prefixing the table name to each attribute name:
 
 > cross0 (Table n1 s1 v1) (Table n2 s2 v2) =
@@ -463,7 +463,7 @@ prefixing the table name to each attribute name:
   be ignored.
 
 > mapWhen p f = map (\z -> if p z then f z else z)
-    
+
 > fanc tblnym attrs a = mapWhen (a ==) (dot tblnym) attrs
 
   The following does a "flatmap" of (fanc tn aLs) on aRs, that is,
@@ -474,7 +474,7 @@ prefixing the table name to each attribute name:
 > fancs tn aLs (aR:aRs) = fancs tn (fanc tn aLs aR) aRs
 
   The following fixes the table name of the second table only, just
-  arbitrarily chosen. "Gensym" should eventually go here; for now, 
+  arbitrarily chosen. "Gensym" should eventually go here; for now,
   it errors. Once it's fixed up with gensym, its calls will not have
   to change.
 
@@ -588,7 +588,7 @@ Division
 >      t2  = cross (project rms r) s
 >      t3  = project rms (t2 \\ t1)
 >      t4  = project rms r
->  in  x `seq` 
+>  in  x `seq`
 >      renameTable
 >      ("divideBy (" ++ n1 ++ ", " ++ n2 ++ ")")
 >      (t4 \\ t3)
@@ -596,7 +596,7 @@ Division
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 MAIN -- REGRESSION
 
-The main function of this module is a regression test over all the 
+The main function of this module is a regression test over all the
 machinery implemented above. "Regression" means that it exercises a
 little bit of everything, historically, so we can find out early on
 whether a new addition breaks something already implemented.
@@ -663,20 +663,20 @@ Set-difference is '\\'.
 
 Big query on page 97, first some intermediates for debugging
 
->   q1  <- return (selectf "cstmr-name" (== "Smith") customer)  
+>   q1  <- return (selectf "cstmr-name" (== "Smith") customer)
 >   q2  <- return (project ["cstmr-street", "cstmr-city"] q1)
 >   q3  <- return (rename "smith-addr" ["street", "city"] q2)
 >   q4  <- return (cross customer q3)
 >   qP1 <- return (twoFieldsMatch "cstmr-street" "street")
 >   qP2 <- return (twoFieldsMatch "cstmr-city"   "city")
->   qP  <- return (combinePs qP1 (&&) qP2) 
+>   qP  <- return (combinePs qP1 (&&) qP2)
 >   q5  <- return (select qP q4)
 >   printTable q5
 
 Then the big, ugly, nested expression
 
->   printTable    
->    (project ["customer.cstmr-name"] 
+>   printTable
+>    (project ["customer.cstmr-name"]
 >     (select
 >      (combinePs
 >       (twoFieldsMatch "customer.cstmr-street" "smith-addr.street") (&&)
@@ -704,7 +704,9 @@ Then the big, ugly, nested expression
 >           (selectf "branch-city" (== "Brooklyn") branch))
 >   r2  <- return (project ["cstmr-name", "branch-name"]
 >           (join depositor account))
->      
->   printTable (r2 `divideBy` r1)
 
- 
+The following has a bug:
+
+>   -- printTable (r2 `divideBy` r1)
+
+>   return ()
