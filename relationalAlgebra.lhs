@@ -5,48 +5,44 @@ Concepts," by Silberschatz, Korth, and Sudarshan.
 
 TODO:
 
-1.  Use the "Maybe" monad more ubiquitously, if not comprehensively,
-    preferably to the "error" function, for error management.  Start
-    off with the unused "columnCount" below.
+1.  Use "Maybe" more ubiquitously, if not comprehensively, preferably in the
+    "error" function. Start off with the unused "columnCount" below.
 
 2.  DONE (was to remove some lameness in "join")
 
-3.  Expand schemata to include domains, represented as Haskell types?
-    In the current design, a Schema is just a list of column-header
-    names, i.e., attributes without extra domain specifications. Two
-    columns have the same domain iff their names match. For more
-    richness and better integration with Haskell, apply Haskell
-    type-checking to schema validation!
+3.  Expand schemata to include domains, represented as Haskell types? In the
+    current design, a Schema is just a list of column-header names, i.e.,
+    attributes without extra domain specifications. Two columns have the same
+    domain iff their names match. For more richness and better integration with
+    Haskell, apply Haskell type-checking to schema validation!
 
-4.  Primary keys are implicit singletons inhabiting the first column
-    of every table. Change this: make the primary key a LIST of
-    attribute-names, and make it an explicit slot in the Table data
+4.  Primary keys are implicit singletons inhabiting the first column of every
+    table (except intersection tables!). Change this: make the primary key a
+    LIST of attribute-names, and make it an explicit slot in the Table data
     type.
 
-5.  Nothing distinguishes intersection tables from primary data
-    tables.  Fix this.
+5.  Nothing distinguishes intersection tables from primary data tables except
+    possible duplicate values in the first column, and that belies implicit
+    primary keys (number 4, above). Fix this.
 
 6.  Figure out how to "gensym" in "fn2", either from the GHC library
-    Language.Haskell.THSyntax, or write your own with Monads.  For
-    now, there is no Gensym. Thus, the function "fn2" just errors.
+    Language.Haskell.THSyntax, or write your own with Monads. For now, there is
+    no Gensym. Thus, the function "fn2" just errors.
 
-7.  Check for duplicates in the schema and in the records of a newly
-    constructed table. Not at all sure how to put consistency checks
-    in data constructors.
+7.  Check for duplicates in the schema and in the records of a newly constructed
+    table. Not at all sure how to put consistency checks in data constructors.
 
-8.  Understand numeric overloading better, for cleaner selection
-    predicates.
+8.  Understand numeric overloading better, for cleaner selection predicates.
 
-9.  Understand why 'read "3"' works in the code, but not from the
-    console. What is there about the more extensive typing information
-    available in the code that makes it work there.
+9.  Understand why 'read "3"' works in the code, but not from the console. What
+    is there about the more extensive typing information available in the code
+    that makes it work there.
 
-10. Implement positional notation for selection predicates, a`-la page
-    98 of Silberschatz. Add the example from p. 97 to the regression
-    test in "main".
+10. Implement positional notation for selection predicates, a`-la page 98 of
+    Silberschatz. Add the example from p. 97 to the regression test in "main".
 
-11. Convert schema and record representations to arrays due to heavy
-    use of indexing.
+11. Convert schema and record representations to arrays due to heavy use of
+    indexing.
 
 ===========================================================================
 
@@ -59,6 +55,7 @@ TODO:
 >   , join         -- Table -> Table -> Table
 >   , thetaJoin    -- (Schema -> Record -> Bool) -> Table -> Table -> Table
 >   , divideBy     -- Table -> Table -> Table
+>                  --  (broken; see https://goo.gl/r4WZ78)
 >   , intersect    -- Table -> Table -> Table
 >   , union        -- Table -> Table -> Table
 >   , (\\)         -- Table -> Table -> Table ("set difference")
@@ -69,7 +66,7 @@ TODO:
 >   -- some special cases --
 >   , selectf      -- String -> (String -> Bool) -> Table -> Table
 >   , cross2       -- Table -> Table -> Table
->                  --  (only renames schema in second table
+>                  --  (only renames schema in second table)
 >   , cross0       -- Table -> Table -> Table
 >                  --  (renames all fields colliding or not)
 
@@ -105,17 +102,17 @@ pure strings for simplicity):
 >               , records ::  Records }  -- record contents
 >   deriving (Eq, Show)
 
-There are some things here we should check, but don't at present
+TODO: There are some things here we should check, but don't at present
 1. length schema == length (records !! 0)
 2. schema == (nub schema) -- checks for duplicates
 Here would be a check for number 1
 
-> columnCount (Table n s v) = let ls = length s in
->                               if (length v > 0) then
->                                 let rl = length (v!!0) in
->                                   if (rl /= ls) then Nothing
+> columnCount (Table n schm recs) = let ls = length schm in
+>                                     if (length recs > 0) then
+>                                       let rl = length (recs!!0) in
+>                                         if (rl /= ls) then Nothing
+>                                         else Just ls
 >                                     else Just ls
->                               else Just ls
 
 ===========================================================================
 S A M P L E   D A T A B A S E
@@ -166,6 +163,8 @@ S A M P L E   D A T A B A S E
 >     , ["Williams"  , "Nassau"      , "Princeton"  ]
 >     ]
 
+The following is an intersection table.
+
 > depositor = Table
 >     "depositor"
 >     [  "cstmr-name", "acct-num" ]
@@ -192,6 +191,8 @@ S A M P L E   D A T A B A S E
 >     , ["L-93"    , "Mianus"     ,  "500"   ]
 >     ]
 
+The following is another intersection table.
+
 > borrower = Table
 >     "borrower"
 >     [  "cstmr-name", "loan-num" ]
@@ -206,11 +207,10 @@ S A M P L E   D A T A B A S E
 >     , ["Williams"  , "L-17"     ]
 >     ]
 
-We need "tuple variables" for associative lookup and 1-based index
-lookup. Represent the tuple variable with a zero-based index of the
-tuple in the relation instead of with a putative tuple value to avoid
-the necessity of membership checking, which is linear-time in the size
-of the table.
+We need "tuple variables" for associative lookup and for 1-based index lookup.
+Represent a tuple variable with a zero-based index of the tuple in the relation
+instead of with a putative tuple value to avoid the necessity of membership
+checking, which is linear-time in the size of the table.
 
 > assocL1 :: Table -> Int -> Field -> Maybe Value
 > assocL1 (Table n s v) whichTupleZeroBased field =
@@ -221,7 +221,7 @@ of the table.
 > assocL2 schema record field =
 >  lookup field (zip schema record)
 
-In the next one, we can be more clever with the "Maybe" monad:
+In the next one, we can be more clever with "Maybe":
 
 > oneBasedIndexLookup :: Table -> Int -> Int -> Maybe Value
 > oneBasedIndexLookup (Table n s v) whichTupleZeroBased iField =
@@ -280,6 +280,8 @@ Pretty Print
 
 >      capped str = str ++ "|"
 
+The following isn't friendly to Unix-like systems:
+
 > newline = ['\r', '\n']
 
 > printTable = putStr . showTable
@@ -288,9 +290,8 @@ Pretty Print
 Projection (Selecting Columns)
 ===========================================================================
 
-Find the presumed first and only match for a given string in a list of
-strings.  We frequently partially apply this to a list to get a mappable
-function of a str.
+Find the presumed first and only match for a given string in a list of strings.
+Partially apply this to a list to get a mappable function of a str.
 
 > ixOfStr lyst str = ixs' 0 lyst str where
 >   ixs' i [] s     = -1
@@ -328,19 +329,18 @@ Selecting Records
 >     if (i == (-1)) then (Table nn [] [[]])
 >     else Table nn s (filter (\z -> (pred (z !! i))) v)
 
-Here is a more general "select" function. First, note that the
-predicate accesses the schema, and the predicates will be more
-complicated in this general setting. We partially apply the predicate
-to the schema, resulting in a function of a record, and we just filter
-that over the input table's record values.
+Here is a more general "select" function. First, note that the predicate
+accesses the schema, and the predicates will be more complicated in this general
+setting. Partially apply the predicate to the schema, resulting in a function of
+a record, and just filter that over the input table's record values.
 
 > select :: (Schema -> Record -> Bool) -> Table -> Table
 > select pred t@(Table n s v) =
 >   let nn = ("select (" ++ n ++ ")") in
 >     Table nn s (filter (pred s) v)
 
-First argument to this better "select" is a function from a schema and
-a record to a bool. Here are some predicate-construction helpers:
+First argument to this better "select" is a function from a schema and a record
+to a bool. Here are some helpers for predicate construction:
 
 > fieldOpConstP field ordop const =
 >  (\schema record ->
